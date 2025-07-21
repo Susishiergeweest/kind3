@@ -1,13 +1,594 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Baby Visit Booking - Schedule Your Visit & Gift Registry</title>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Babycadeautjes & Bezoek - Help ons verwelkomen</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .strikethrough {
+            text-decoration: line-through;
+            opacity: 0.5;
+        }
+        .admin-panel {
+            display: none;
+        }
+        .show-admin {
+            display: block;
+        }
+        .timeslot-taken {
+            background-color: #f8f9fa;
+            color: #adb5bd;
+            cursor: not-allowed;
+        }
+        
+        .tab-btn {
+            transition: all 0.3s ease;
+        }
+        
+        .tab-btn.active-tab {
+            box-shadow: 0 2px 0 0 #4a6cf7;
+        }
+        
+        .card-item {
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+        
+        .card-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        
+        .timeslot-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .timeslot-btn:not(.timeslot-taken):hover {
+            background-color: #f8f9fa;
+            transform: translateY(-1px);
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <!-- Header -->
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-gray-800 mb-4">Welkom kleine <span class="text-blue-600">baby</span></h1>
+            <p class="text-lg text-gray-600">Cadeautjes en bezoekjeswebsaait</p>
+            <div class="mt-8 flex justify-center">
+                <button onclick="showTab('gifts')" class="tab-btn active-tab px-6 py-3 bg-white text-gray-800 border-b-2 border-blue-600 font-medium">Eten & Klusjes</button>
+                <button onclick="showTab('visits')" class="tab-btn px-6 py-3 bg-white text-gray-600 border-b-2 border-transparent font-medium">Bezoek plannen</button>
+            </div>
+        </header>
+
+        <!-- Admin Panel -->
+        <div id="admin-panel" class="admin-panel bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Admin Panel</h2>
+            <div class="mb-4">
+                <label for="admin-password" class="block text-gray-700 mb-2">Wachtwoord:</label>
+                <input type="password" id="admin-password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500">
+                <button onclick="loginAdmin()" class="mt-2 px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700">Inloggen</button>
+            </div>
+            
+            <div id="admin-content" class="hidden">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-gray-800">Beheerpaneel</h3>
+                    <button onclick="logoutAdmin()" class="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm">
+                        <i class="fas fa-sign-out-alt mr-1"></i>Uitloggen
+                    </button>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-800 mb-3">Bezoekmomenten beheren</h3>
+                
+                <div class="mb-6">
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Bestaande tijdslots:</h4>
+                    <div id="existing-timeslots" class="space-y-2 mb-4">
+                        <!-- Existing timeslots will be listed here -->
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <h4 class="text-lg font-medium text-gray-700 mb-2">Nieuwe tijdslot toevoegen:</h4>
+                    <div class="flex flex-wrap items-end gap-2">
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Datum:</label>
+                            <input type="date" id="new-date" class="px-4 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-gray-600 text-sm mb-1">Tijd:</label>
+                            <input type="time" id="new-time" class="px-4 py-2 border rounded-lg">
+                        </div>
+                        <button onclick="addTimeslot()" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 h-[42px]">Toevoegen</button>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-semibold text-gray-800 mb-3 mt-6">Cadeautjes/Klusjes beheren</h3>
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Nieuw item toevoegen:</label>
+                    <select id="item-type" class="px-4 py-2 border rounded-lg mr-2">
+                        <option value="gift">Cadeautje</option>
+                        <option value="chore">Klusje</option>
+                    </select>
+                    <input type="text" id="new-item" placeholder="Beschrijving" class="px-4 py-2 border rounded-lg mr-2">
+                    <button onclick="addNewItem()" class="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600">Toevoegen</button>
+                </div>
+                
+                <div class="mt-6">
+                    <button onclick="resetAll()" class="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600">Alles resetten</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gifts Tab -->
+        <div id="gifts-tab" class="tab-content bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+            <p class="text-gray-600 mb-8">Klik op een item om aan te geven dat het al geregeld is. Zo voorkomen we dubbele cadeautjes!</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="gifts-list">
+                <!-- Gift items will be added here by JavaScript -->
+            </div>
+            
+            <h3 class="text-xl font-bold text-gray-800 mt-12 mb-6 pt-6 border-t border-gray-100">Eten & Drinken</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5" id="food-list">
+                <!-- Food items will be added here by JavaScript -->
+            </div>
+
+            <h3 class="text-xl font-bold text-gray-800 mt-12 mb-6 pt-6 border-t border-gray-100">Klusjes die helpen</h3>
+            <p class="text-gray-600 mb-8">Zware klusjes waar we blij mee zijn als iemand ze wil overnemen!</p>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-5" id="chores-list">
+                <!-- Chore items will be added here by JavaScript -->
+            </div>
+        </div>
+
+        <!-- Visits Tab -->
+        <div id="visits-tab" class="tab-content bg-white p-8 rounded-xl shadow-sm border border-gray-100 hidden">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">Bezoek plannen</h2>
+            <p class="text-gray-600 mb-8">Kies een beschikbaar moment om langs te komen en de baby te ontmoeten!</p>
+            
+            <div class="mb-6">
+                <label for="visit-name" class="block text-gray-700 mb-2">Jouw naam:</label>
+                <input type="text" id="visit-name" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" placeholder="Vul je naam in">
+            </div>
+            
+            <div class="mb-4">
+                <label for="visit-date" class="block text-gray-700 mb-2">Selecteer een datum:</label>
+                <select id="visit-date" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500" onchange="loadTimeslots()">
+                    <option value="">-- Kies een datum --</option>
+                    <!-- Dates will be added here by JavaScript -->
+                </select>
+            </div>
+            
+            <div id="timeslots-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                <!-- Timeslots will be added here by JavaScript -->
+            </div>
+            
+            <div id="confirmation" class="hidden mt-6 p-4 bg-green-100 text-green-800 rounded-lg">
+                <p class="font-semibold">Bedankt voor het plannen van je bezoek!</p>
+                <p id="confirmation-details" class="mt-2"></p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-12 text-center text-gray-600">
+            <p>Dankjewel voor jullie steun tijdens deze bijzondere tijd!</p>
+            <p class="mt-2">Voor vragen: <a href="mailto:contact@babycadeautjes.nl" class="text-pink-500 hover:underline">kan je hier kijken</a></p>
+            <div class="mt-4">
+                <button onclick="toggleAdmin()" id="admin-btn" active-tab px-6 py-3 bg-white text-gray-800 border-b-2 border-blue-600 font-medium">
+                    <i class="fas fa-lock mr-2"></i>Admin
+                </button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        // Sample data
+        let gifts = [
+            { name: "Luiers (maat 2)", selectedBy: [] },
+            { name: "Babybaddoek", selectedBy: [] },
+            { name: "Knuffeldoekjes", selectedBy: [] },
+            { name: "Babyboekjes", selectedBy: [] },
+            { name: "Fopspeen", selectedBy: [] },
+            { name: "Babyolie", selectedBy: [] }
+        ];
+        
+        let food = [
+            "Diepvriesmaaltijden",
+            "Fruitmand",
+            "Ontbijtbox",
+            "Luxe chocolade",
+            "Koffiebonen",
+            "Thee assortiment"
+        ];
+        
+        let chores = [
+            "Boodschappen doen",
+            "Stofzuigen en dweilen",
+            "Was opvouwen",
+            "Tuin onderhouden",
+            "Auto wassen",
+            "Ramenzemen"
+        ];
+        
+        let timeslots = {
+            "2023-07-15": ["10:00", "14:00", "16:00"],
+            "2023-07-16": ["11:00", "15:00", "17:00"],
+            "2023-07-22": ["09:00", "13:00", "18:00"]
+        };
+        
+        let bookedSlots = {}; // Will store booked timeslots
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            renderGifts();
+            renderFood();
+            renderChores();
+            initVisitDates();
+            // Hide the chores tab since it's now combined
+            document.getElementById('chores-tab').style.display = 'none';
+            
+            // Check if admin button should be shown (for demo purposes)
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('admin')) {
+                document.getElementById('admin-btn').classList.remove('hidden');
+            }
+        });
+        
+        // Tab switching
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.add('hidden');
+            });
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active-tab');
+                if (btn.textContent.toLowerCase().includes(tabName)) {
+                    btn.classList.add('active-tab');
+                }
+            });
+            
+            document.getElementById(`${tabName}-tab`).classList.remove('hidden');
+        }
+        
+        // Render gift lists
+        function renderGifts() {
+            const giftsList = document.getElementById('gifts-list');
+            giftsList.innerHTML = '';
+            
+            gifts.forEach((gift, index) => {
+                const giftItem = document.createElement('div');
+                giftItem.className = `card-item bg-white p-5 rounded-lg cursor-pointer border border-gray-100 ${gift.selectedBy.length > 0 ? 'strikethrough' : ''}`;
+                
+                let selectedText = gift.selectedBy.length > 0 ? 
+                    `<div class="text-xs text-gray-500 mt-1">Geselecteerd</div>` : 
+                    '';
+                
+                giftItem.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-gift text-blue-500 mr-3"></i>
+                        <span class="text-gray-700">${gift.name}</span>
+                    </div>
+                    ${selectedText}
+                `;
+                giftItem.addEventListener('click', () => toggleGiftSelection(giftItem, index));
+                giftsList.appendChild(giftItem);
+            });
+        }
+        
+        function renderFood() {
+            const foodList = document.getElementById('food-list');
+            foodList.innerHTML = '';
+            
+            food.forEach((item, index) => {
+                const foodItem = document.createElement('div');
+                foodItem.className = 'card-item bg-white p-5 rounded-lg cursor-pointer border border-gray-100';
+                foodItem.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-utensils text-green-500 mr-3"></i>
+                        <span class="text-gray-700">${item}</span>
+                    </div>
+                `;
+                foodItem.addEventListener('click', () => toggleStrike(foodItem, 'food', index));
+                foodList.appendChild(foodItem);
+            });
+        }
+        
+        function renderChores() {
+            const choresList = document.getElementById('chores-list');
+            choresList.innerHTML = '';
+            
+            chores.forEach((chore, index) => {
+                const choreItem = document.createElement('div');
+                choreItem.className = 'card-item bg-white p-5 rounded-lg cursor-pointer border border-gray-100';
+                choreItem.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fas fa-broom text-indigo-500 mr-3"></i>
+                        <span class="text-gray-700">${chore}</span>
+                    </div>
+                `;
+                choreItem.addEventListener('click', () => toggleStrike(choreItem, 'chores', index));
+                choresList.appendChild(choreItem);
+            });
+        }
+        
+        // Toggle strike-through for items
+        function toggleGiftSelection(element, index) {
+            const gift = gifts[index];
+            // Toggle selection state
+            gift.selectedBy = gift.selectedBy.length > 0 ? [] : ['Geselecteerd'];
+            
+            // Re-render gifts to show updated state
+            renderGifts();
+            
+            // In a real app, you would save this to a database
+            console.log(`Gift ${gift.name} selection updated`);
+        }
+        
+        // Visit scheduling functions
+        function initVisitDates() {
+            const dateSelect = document.getElementById('visit-date');
+            
+            // Add available dates to dropdown
+            Object.keys(timeslots).forEach(date => {
+                const option = document.createElement('option');
+                option.value = date;
+                option.textContent = formatDate(date);
+                dateSelect.appendChild(option);
+            });
+        }
+        
+        function loadTimeslots() {
+            const date = document.getElementById('visit-date').value;
+            const container = document.getElementById('timeslots-container');
+            container.innerHTML = '';
+            
+            if (!date) return;
+            
+            // Hide confirmation if showing
+            document.getElementById('confirmation').classList.add('hidden');
+            
+            timeslots[date].forEach(time => {
+                const slotId = `${date}-${time}`;
+                const isBooked = bookedSlots[slotId];
+                
+                const slot = document.createElement('button');
+                slot.className = `timeslot-btn p-3 border rounded-lg text-center ${isBooked ? 'timeslot-taken' : 'border-gray-200'}`;
+                slot.textContent = time;
+                slot.disabled = isBooked;
+                
+                if (!isBooked) {
+                    slot.addEventListener('click', () => bookTimeslot(date, time));
+                } else {
+                    slot.innerHTML = `<span class="text-gray-500">${time} (bezet)</span>`;
+                }
+                
+                container.appendChild(slot);
+            });
+        }
+        
+        function bookTimeslot(date, time) {
+            const name = document.getElementById('visit-name').value.trim();
+            if (!name) {
+                alert('Vul alstublieft uw naam in');
+                return;
+            }
+            
+            const slotId = `${date}-${time}`;
+            bookedSlots[slotId] = name;
+            
+            // Update UI
+            loadTimeslots();
+            
+            // Show confirmation
+            const confirmation = document.getElementById('confirmation');
+            const details = document.getElementById('confirmation-details');
+            
+            details.textContent = `${name}, we zien je graag op ${formatDate(date)} om ${time} uur!`;
+            confirmation.classList.remove('hidden');
+            
+            // Scroll to confirmation
+            confirmation.scrollIntoView({ behavior: 'smooth' });
+            
+            // In a real app, you would save this booking to a database
+            console.log(`Booked ${slotId} for ${name}`);
+        }
+        
+        function formatDate(dateString) {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('nl-NL', options);
+        }
+        
+        // Admin functions
+        function toggleAdmin() {
+            document.getElementById('admin-panel').classList.toggle('show-admin');
+        }
+        
+        function loginAdmin() {
+            const password = document.getElementById('admin-password').value;
+            // Simple password check (in production, use proper authentication)
+            const hashedInput = btoa(password); // Basic obfuscation
+            if (hashedInput === "YmFieTEyMw==") { // base64 encoded "baby123"
+                document.getElementById('admin-content').classList.remove('hidden');
+                renderExistingTimeslots();
+                renderExistingGifts();
+                alert('Ingelogd als admin!');
+            } else {
+                alert('Onjuist wachtwoord');
+            }
+        }
+        
+        function renderExistingGifts() {
+            const container = document.getElementById('existing-gifts');
+            container.innerHTML = '';
+            
+            gifts.forEach((gift, index) => {
+                const giftDiv = document.createElement('div');
+                giftDiv.className = 'flex items-center justify-between bg-gray-50 p-3 rounded';
+                
+                const giftInfo = document.createElement('div');
+                giftInfo.className = 'flex-1';
+                giftInfo.innerHTML = `
+                    <div class="font-medium">${gift.name}</div>
+                    ${gift.selectedBy.length > 0 ? 
+                        `<div class="text-xs text-gray-600">Geselecteerd door: ${gift.selectedBy.join(', ')}</div>` : 
+                        '<div class="text-xs text-gray-400">Nog niet geselecteerd</div>'}
+                `;
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'text-red-500 hover:text-red-700 ml-2';
+                deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                deleteBtn.onclick = () => deleteGift(index);
+                
+                giftDiv.appendChild(giftInfo);
+                giftDiv.appendChild(deleteBtn);
+                container.appendChild(giftDiv);
+            });
+        }
+
+        function renderExistingTimeslots() {
+            const container = document.getElementById('existing-timeslots');
+            container.innerHTML = '';
+            
+            if (Object.keys(timeslots).length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Geen tijdslots beschikbaar</p>';
+                return;
+            }
+            
+            Object.keys(timeslots).sort().forEach(date => {
+                const dateHeader = document.createElement('div');
+                dateHeader.className = 'font-medium text-gray-700 mt-4';
+                dateHeader.textContent = formatDate(date);
+                container.appendChild(dateHeader);
+                
+                timeslots[date].forEach(time => {
+                    const slotDiv = document.createElement('div');
+                    slotDiv.className = 'flex items-center justify-between bg-gray-50 p-2 rounded';
+                    
+                    const timeSpan = document.createElement('span');
+                    timeSpan.className = 'text-gray-700';
+                    timeSpan.textContent = time;
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'text-red-500 hover:text-red-700';
+                    deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+                    deleteBtn.onclick = () => deleteTimeslot(date, time);
+                    
+                    slotDiv.appendChild(timeSpan);
+                    slotDiv.appendChild(deleteBtn);
+                    container.appendChild(slotDiv);
+                });
+            });
+        }
+        
+        function addTimeslot() {
+            const date = document.getElementById('new-date').value;
+            const time = document.getElementById('new-time').value;
+            
+            if (!date || !time) {
+                alert('Vul zowel datum als tijd in');
+                return;
+            }
+            
+            // Format time to HH:MM
+            const formattedTime = time.substring(0, 5);
+            
+            // Add to timeslots
+            if (!timeslots[date]) {
+                timeslots[date] = [];
+            }
+            
+            if (!timeslots[date].includes(formattedTime)) {
+                timeslots[date].push(formattedTime);
+                timeslots[date].sort();
+                
+                // Update UI
+                initVisitDates();
+                renderExistingTimeslots();
+                document.getElementById('new-time').value = '';
+                alert('Tijdslot toegevoegd!');
+            } else {
+                alert('Dit tijdslot bestaat al');
+            }
+        }
+        
+        function deleteTimeslot(date, time) {
+            if (!confirm(`Weet je zeker dat je het tijdslot ${time} op ${formatDate(date)} wilt verwijderen?`)) {
+                return;
+            }
+            
+            timeslots[date] = timeslots[date].filter(t => t !== time);
+            
+            // Remove date if no more timeslots
+            if (timeslots[date].length === 0) {
+                delete timeslots[date];
+            }
+            
+            // Also remove any bookings for this slot
+            const slotId = `${date}-${time}`;
+            delete bookedSlots[slotId];
+            
+            // Update UI
+            renderExistingTimeslots();
+            initVisitDates();
+            alert('Tijdslot verwijderd!');
+        }
+        
+        function deleteGift(index) {
+            if (!confirm(`Weet je zeker dat je "${gifts[index].name}" wilt verwijderen?`)) {
+                return;
+            }
+            
+            gifts.splice(index, 1);
+            renderExistingGifts();
+            renderGifts();
+            alert('Cadeautje verwijderd!');
+        }
+
+        function addNewItem() {
+            const type = document.getElementById('item-type').value;
+            const item = document.getElementById('new-item').value.trim();
+            
+            if (!item) {
+                alert('Vul een beschrijving in');
+                return;
+            }
+            
+            if (type === 'gift') {
+                gifts.push({ name: item, selectedBy: [] });
+                renderGifts();
+            } else {
+                chores.push(item);
+                renderChores();
+            }
+            
+            document.getElementById('new-item').value = '';
+            alert('Item toegevoegd!');
+        }
+        
+        function logoutAdmin() {
+            document.getElementById('admin-content').classList.add('hidden');
+            document.getElementById('admin-password').value = '';
+            alert('Succesvol uitgelogd');
+        }
+
+        function resetAll() {
+            if (confirm('Weet je zeker dat je ALLES wilt resetten? Dit kan niet ongedaan gemaakt worden.')) {
+                // Reset all data to initial state
+                bookedSlots = {};
+                
+                // In a real app, you would make an API call to reset the database
+                console.log("All data has been reset");
+                alert('Alles is gereset!');
+                
+                // Reload the page to reflect changes
+                location.reload();
+            }
+        }
+    </script>
+<p style="border-radius: 8px; text-align: center; font-size: 12px; color: #fff; margin-top: 16px;position: fixed; left: 8px; bottom: 8px; z-index: 10; background: rgba(0, 0, 0, 0.8); padding: 4px 8px;">Made with <img src="https://enzostvs-deepsite.hf.space/logo.svg" alt="DeepSite Logo" style="width: 16px; height: 16px; vertical-align: middle;display:inline-block;margin-right:3px;filter:brightness(0) invert(1);"><a href="https://enzostvs-deepsite.hf.space" style="color: #fff;text-decoration: underline;" target="_blank" >DeepSite</a> - 🧬 <a href="https://enzostvs-deepsite.hf.space?remix=Pekelvdvdl/babylijst" style="color: #fff;text-decoration: underline;" target="_blank" >Remix</a></p></body>
 </html>
